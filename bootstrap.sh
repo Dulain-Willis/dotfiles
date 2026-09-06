@@ -184,7 +184,7 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=9
+TOTAL_STAGES=10
 
 # OS is set in stage 1 and read by ensure_cmd: "mac" or "ubuntu".
 OS=""
@@ -385,7 +385,27 @@ stage "eza"
 say "Modern ls replacement. Package name is 'eza' on both brew and apt."
 ensure_cmd eza
 
-# ── Stage 9: prepare config directories ──────────────────────────────────
+# ── Stage 9: starship ────────────────────────────────────────────────────
+stage "starship"
+say "Cross-shell prompt. The official install script is identical on mac and"
+say "Linux and drops a single 'starship' binary into /usr/local/bin (via sudo)."
+say "Its config is a plain file, stowed to ~/.config/starship.toml by 'make'."
+
+if command -v starship >/dev/null 2>&1; then
+  note "starship already installed ($(command -v starship)) — skipping"
+  PRESENT+=("starship")
+else
+  step "installing starship: curl -sS https://starship.rs/install.sh | sh -s -- -y"
+  if confirm "run the starship installer now?"; then
+    curl -sS https://starship.rs/install.sh | sh -s -- -y
+    printf '  %s✓ installed%s starship\n' "$GREEN" "$RESET"
+    INSTALLED+=("starship")
+  else
+    SKIPPED+=("install starship: curl -sS https://starship.rs/install.sh | sh")
+  fi
+fi
+
+# ── Stage 10: prepare config directories ─────────────────────────────────
 stage "prepare config directories"
 say "stow links files into a directory. If ~/.config/<tool> is missing, stow"
 say "would replace the whole directory with a single symlink ('folding'), which"

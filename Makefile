@@ -9,7 +9,7 @@
 #
 # Needs `stow` on PATH. On a fresh machine run `make bootstrap` first.
 
-PACKAGES := zsh kitty tmux nvim eza
+PACKAGES := zsh kitty tmux nvim eza starship
 STOW     := stow --dir $(CURDIR) --target $(HOME) --verbose
 
 .DEFAULT_GOAL := install

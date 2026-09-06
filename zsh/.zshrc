@@ -11,4 +11,4 @@ alias ll="eza -lh --icons"
 export EZA_CONFIG_DIR="$HOME/.config/eza" #sets directory you would like eza to look for config
 
 #initializes custom command prompt from starship
-eval "$(starship init zsh)"
+#eval "$(starship init zsh)"
