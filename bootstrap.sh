@@ -184,7 +184,7 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=8
+TOTAL_STAGES=9
 
 # OS is set in stage 1 and read by ensure_cmd: "mac" or "ubuntu".
 OS=""
@@ -380,7 +380,12 @@ else
   fi
 fi
 
-# ── Stage 8: prepare config directories ──────────────────────────────────
+# ── Stage 8: eza ─────────────────────────────────────────────────────────
+stage "eza"
+say "Modern ls replacement. Package name is 'eza' on both brew and apt."
+ensure_cmd eza
+
+# ── Stage 9: prepare config directories ──────────────────────────────────
 stage "prepare config directories"
 say "stow links files into a directory. If ~/.config/<tool> is missing, stow"
 say "would replace the whole directory with a single symlink ('folding'), which"
@@ -391,6 +396,7 @@ say "existing one can be deleted so stow rebuilds it clean."
 prep_config_dir "$HOME/.config/kitty" kitty
 prep_config_dir "$HOME/.config/nvim"  nvim
 prep_config_dir "$HOME/.config/tmux"  tmux
+prep_config_dir "$HOME/.config/eza"   eza
 
 # tmux only: stow owns tmux.conf.local; tmux.conf is a link into the clone.
 if [[ -d "$OMT_DIR" ]]; then
