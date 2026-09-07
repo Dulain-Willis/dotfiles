@@ -184,7 +184,7 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=10
+TOTAL_STAGES=11
 
 # OS is set in stage 1 and read by ensure_cmd: "mac" or "ubuntu".
 OS=""
@@ -192,6 +192,13 @@ INSTALLED=()  # commands this run actually installed
 PRESENT=()    # commands already present, skipped
 LOGIN_SHELL_CHANGED=0  # set to 1 if this run ran chsh to zsh
 OMT_DIR="$HOME/.local/share/oh-my-tmux"  # oh-my-tmux clone (stage 4 + stage 8)
+
+# Nerd Font installed in stage 11. FONT_FAMILY is the family name fc-list
+# reports and the kitty/starship configs reference; FONT_ASSET is the asset
+# basename in the ryanoasis/nerd-fonts release
+# (…/releases/latest/download/<FONT_ASSET>.zip).
+FONT_FAMILY="ComicShannsMono Nerd Font"
+FONT_ASSET="ComicShannsMono"
 
 # intro is this wizard's opening frame. (The library's banner() talks about
 # browsers and copied values, which don't apply to a package installer.)
@@ -246,6 +253,47 @@ prep_config_dir() {
     say "keeping it; 'stow $name' may report conflicts for you to resolve by hand."
   fi
   return 0
+}
+
+# font_present returns 0 if a face from $FONT_FAMILY is already available to the
+# system. macOS has no fontconfig, so there we look in the font folders;
+# elsewhere we ask fc-list.
+font_present() {
+  if [[ "$OS" == mac ]]; then
+    local d
+    for d in "$HOME/Library/Fonts" "/Library/Fonts" "/System/Library/Fonts"; do
+      if ls "$d/"*ComicShannsMono*NerdFont* >/dev/null 2>&1; then return 0; fi
+    done
+    return 1
+  fi
+  command -v fc-list >/dev/null 2>&1 || return 1
+  fc-list | grep -qi "$FONT_FAMILY"
+}
+
+# install_nerd_font downloads the $FONT_ASSET Nerd Font archive and drops its
+# font files where the OS looks for user fonts: ~/Library/Fonts on macOS,
+# ~/.local/share/fonts on Linux (followed by a font-cache refresh). Nerd Fonts
+# ship .otf for some families (ComicShannsMono) and .ttf for others.
+install_nerd_font() {
+  local url="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${FONT_ASSET}.zip"
+  local dest tmp
+  if [[ "$OS" == mac ]]; then
+    dest="$HOME/Library/Fonts"
+  else
+    dest="$HOME/.local/share/fonts/$FONT_ASSET"
+  fi
+  tmp="$(mktemp -d)"
+  mkdir -p "$dest"
+  step "downloading: $url"
+  curl -fL --progress-bar "$url" -o "$tmp/font.zip"
+  step "unpacking font files into $dest"
+  unzip -oq "$tmp/font.zip" -d "$tmp/font"
+  find "$tmp/font" \( -name '*.ttf' -o -name '*.otf' \) -exec cp -f {} "$dest/" \;
+  rm -rf "$tmp"
+  if [[ "$OS" != mac ]]; then
+    step "refreshing the fontconfig cache: fc-cache -f"
+    fc-cache -f >/dev/null 2>&1 || true
+  fi
 }
 
 intro
@@ -422,6 +470,29 @@ prep_config_dir "$HOME/.config/eza"   eza
 if [[ -d "$OMT_DIR" ]]; then
   step "link ~/.config/tmux/tmux.conf -> oh-my-tmux/.tmux.conf"
   ln -sf "$OMT_DIR/.tmux.conf" "$HOME/.config/tmux/tmux.conf"
+fi
+
+# ── Stage 11: Nerd Font ──────────────────────────────────────────────────
+stage "Nerd Font ($FONT_ASSET)"
+say "kitty and starship render icons and powerline glyphs with a Nerd Font."
+say "This installs '$FONT_FAMILY' unless a face from that family is already"
+say "available. On macOS the .ttf files go in ~/Library/Fonts; on Ubuntu they"
+say "go in ~/.local/share/fonts and 'fc-cache -f' rebuilds the font cache."
+
+if font_present; then
+  note "$FONT_FAMILY already installed — skipping"
+  PRESENT+=("$FONT_FAMILY")
+else
+  ensure_cmd unzip
+  [[ "$OS" != mac ]] && ensure_cmd fc-cache fontconfig fontconfig
+  if confirm "download and install $FONT_FAMILY now?"; then
+    install_nerd_font
+    printf '  %s✓ installed%s %s\n' "$GREEN" "$RESET" "$FONT_FAMILY"
+    INSTALLED+=("$FONT_FAMILY")
+    [[ "$OS" == mac ]] && note "already-open apps pick it up after a restart"
+  else
+    SKIPPED+=("install $FONT_FAMILY ($FONT_ASSET.zip from ryanoasis/nerd-fonts releases)")
+  fi
 fi
 
 # ── Summary ──────────────────────────────────────────────────────────────
