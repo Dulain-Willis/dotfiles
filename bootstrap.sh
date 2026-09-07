@@ -184,7 +184,7 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=11
+TOTAL_STAGES=12
 
 # OS is set in stage 1 and read by ensure_cmd: "mac" or "ubuntu".
 OS=""
@@ -453,7 +453,40 @@ else
   fi
 fi
 
-# ── Stage 10: prepare config directories ─────────────────────────────────
+# ── Stage 10: yazi ───────────────────────────────────────────────────────
+stage "yazi"
+say "Terminal file manager. On macOS it is a one-line 'brew install yazi'; on"
+say "Ubuntu it comes from the yazi-rs apt repo — add the signing key and source,"
+say "then install with apt. There is no config to stow, so 'make' is unchanged."
+
+if command -v yazi >/dev/null 2>&1; then
+  note "yazi already installed ($(command -v yazi)) — skipping"
+  PRESENT+=("yazi")
+elif [[ "$OS" == mac ]]; then
+  step "installing yazi with: brew install yazi"
+  brew install yazi
+  printf '  %s✓ installed%s yazi\n' "$GREEN" "$RESET"
+  INSTALLED+=("yazi")
+else
+  say "This adds /usr/share/keyrings/yazi-keyring.gpg and"
+  say "/etc/apt/sources.list.d/yazi.list, then installs yazi via apt."
+  if confirm "add the yazi-rs apt repo and install yazi now?"; then
+    step "adding the yazi-rs signing key and apt source"
+    curl -fsSL https://yazi-rs.github.io/builds/yazi-keyring.gpg \
+      | sudo tee /usr/share/keyrings/yazi-keyring.gpg >/dev/null
+    echo 'deb [signed-by=/usr/share/keyrings/yazi-keyring.gpg] https://yazi-rs.github.io/builds/ stable main' \
+      | sudo tee /etc/apt/sources.list.d/yazi.list >/dev/null
+    step "installing yazi: sudo apt-get update && sudo apt-get install -y yazi"
+    sudo apt-get update
+    sudo apt-get install -y yazi
+    printf '  %s✓ installed%s yazi\n' "$GREEN" "$RESET"
+    INSTALLED+=("yazi")
+  else
+    SKIPPED+=("install yazi: add the yazi-rs apt repo, then sudo apt install yazi")
+  fi
+fi
+
+# ── Stage 11: prepare config directories ─────────────────────────────────
 stage "prepare config directories"
 say "stow links files into a directory. If ~/.config/<tool> is missing, stow"
 say "would replace the whole directory with a single symlink ('folding'), which"
@@ -472,7 +505,7 @@ if [[ -d "$OMT_DIR" ]]; then
   ln -sf "$OMT_DIR/.tmux.conf" "$HOME/.config/tmux/tmux.conf"
 fi
 
-# ── Stage 11: Nerd Font ──────────────────────────────────────────────────
+# ── Stage 12: Nerd Font ──────────────────────────────────────────────────
 stage "Nerd Font ($FONT_ASSET)"
 say "kitty and starship render icons and powerline glyphs with a Nerd Font."
 say "This installs '$FONT_FAMILY' unless a face from that family is already"
