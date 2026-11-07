@@ -462,9 +462,9 @@ tmux_conf_uninstall_plugins_on_reload=false
 # visit https://github.com/tmux-plugins for available plugins
 #set -g @plugin 'tmux-plugins/tmux-copycat'
 #set -g @plugin 'tmux-plugins/tmux-cpu'
-#set -g @plugin 'tmux-plugins/tmux-resurrect'
-#set -g @plugin 'tmux-plugins/tmux-continuum'
-#set -g @continuum-restore 'on'
+set -g @plugin 'tmux-plugins/tmux-resurrect'
+set -g @plugin 'tmux-plugins/tmux-continuum'
+set -g @continuum-restore 'on'
 
 # -- CATPUCCIN ---------------------------------------------------------------
 set -g @plugin 'catppuccin/tmux'
@@ -472,6 +472,9 @@ set -g @plugin 'tmux-plugins/tmux-cpu'
 
 set -g @catppuccin_flavor 'mocha'
 set -g @catppuccin_window_status_style 'rounded'
+# Show window name (#W), not pane title (#T), so rename-window shows up: catppuccin/tmux#227
+set -g @catppuccin_window_text " #W"
+set -g @catppuccin_window_current_text " #W"
 
 # Make the status line pretty and add some modules 
 set -g status-right-length 100
