@@ -1,3 +1,4 @@
+# Machine-specific config (work-only aliases, etc.) goes in ~/.zshrc.local, not here.
 
 #eval "$(/opt/homebrew/bin/brew shellenv)"
 
@@ -37,3 +38,6 @@ function y() {
 	[ "$cwd" != "$PWD" ] && [ -d "$cwd" ] && builtin cd -- "$cwd" || builtin true
 	command rm -f -- "$tmp"
 }
+
+# Machine-specific overrides (untracked)
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local

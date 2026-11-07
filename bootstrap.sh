@@ -232,25 +232,32 @@ ensure_cmd() {
 }
 
 # prep_config_dir DIR NAME makes DIR a real, empty directory so that later
-# `stow NAME` links files into it, rather than folding the whole directory
-# into a single symlink. If DIR already exists, offer to delete it so stow
-# rebuilds from a clean slate. Always returns 0.
+# `stow NAME` links individual files into it, rather than replacing the whole
+# directory with one symlink (which would trap files the app writes later
+# inside ~/dotfiles). If DIR already exists, offer to delete it. Returns 0.
 prep_config_dir() {
   local dir="$1" name="$2"
   if [[ ! -e "$dir" ]]; then
-    step "creating empty $dir for 'stow $name'"
+    step "creating ~${dir#"$HOME"}"
     mkdir -p "$dir"
     return 0
   fi
-  warn "$dir already exists."
-  say "Deleting it lets 'stow $name' recreate its contents as clean symlinks"
-  say "from ~/dotfiles. Anything in there that is not tracked in ~/dotfiles is lost."
-  if confirm "delete $dir and let stow rebuild it?"; then
+  local short="~${dir#"$HOME"}"
+  printf '\n'
+  warn "$short already exists."
+  printf '\n'
+  say "  Keep it:    nothing is erased, but stow will fail on any file"
+  say "              that clashes with one in your repo."
+  say "  Delete it:  everything in the folder is erased, then replaced"
+  say "              with your repo's version. Anything you never"
+  say "              committed to ~/dotfiles is gone."
+  printf '\n'
+  if confirm "Delete $short?"; then
     [[ -n "$HOME" && "$dir" == "$HOME/"* ]] && rm -rf "$dir"
     mkdir -p "$dir"
-    say "cleared."
+    say "deleted. stow will rebuild it."
   else
-    say "keeping it; 'stow $name' may report conflicts for you to resolve by hand."
+    say "kept. If stow reports a clash, move that file aside and re-run make."
   fi
   return 0
 }
@@ -324,8 +331,8 @@ if [[ "$OS" == mac ]]; then
     exit 1
   fi
 else
-  say "apt needs sudo. You'll enter your password once now; it's cached for the"
-  say "rest of this run (about 15 minutes), so later steps won't re-prompt."
+  say "apt needs your sudo password. Enter it once; it's remembered for"
+  say "the rest of this run."
   sudo -v
   step "refreshing the apt package index: sudo apt-get update"
   sudo apt-get update
@@ -333,12 +340,12 @@ fi
 
 # ── Stage 2: stow ────────────────────────────────────────────────────────
 stage "GNU Stow"
-say "Stow is the symlink manager that puts these dotfiles into place."
+say "Stow links the files in ~/dotfiles into your home folder."
 ensure_cmd stow
 
 # ── Stage 3: zsh ─────────────────────────────────────────────────────────
 stage "zsh"
-say "The shell config in this repo is written for zsh."
+say "Your shell config is written for zsh, so it needs to be installed."
 ensure_cmd zsh
 
 zsh_path="$(command -v zsh || true)"
@@ -359,7 +366,7 @@ fi
 
 # ── Stage 4: tmux ────────────────────────────────────────────────────────
 stage "tmux"
-say "Terminal multiplexer. The 'tmux' package name is the same on brew and apt."
+say "Splits one terminal into multiple panes and sessions."
 ensure_cmd tmux
 
 # oh-my-tmux ships .tmux.conf (linked into place in stage 8) plus a
@@ -375,15 +382,16 @@ fi
 
 # ── Stage 5: neovim ──────────────────────────────────────────────────────
 stage "neovim"
-say "The command is 'nvim' but the package is 'neovim' on both brew and apt."
+say "Your editor."
 ensure_cmd nvim neovim neovim
 
 # ── Stage 6: LazyVim dependencies ────────────────────────────────────────
 stage "LazyVim dependencies"
 say "LazyVim needs three extra tools:"
-say "  - curl            (blink.cmp downloads its fuzzy-matching library)"
-say "  - a C compiler     (nvim-treesitter, main branch, builds parsers)"
-say "  - the tree-sitter CLI (nvim-treesitter, main branch, drives the build)"
+say ""
+say "  curl             downloads a helper library for search"
+say "  C compiler       builds the syntax-highlighting parsers"
+say "  tree-sitter CLI  runs that build"
 
 ensure_cmd curl
 
@@ -409,9 +417,9 @@ ensure_cmd tree-sitter tree-sitter-cli tree-sitter-cli
 
 # ── Stage 7: kitty ───────────────────────────────────────────────────────
 stage "kitty"
-say "kitty ships an official binary installer that's identical on mac and Linux."
-say "It installs to /Applications/kitty.app (mac) or ~/.local/kitty.app (Linux)"
-say "and touches nothing else. Re-running it updates kitty in place."
+say "Your terminal app. Uses kitty's official installer, which only touches"
+say "/Applications/kitty.app (mac) or ~/.local/kitty.app (Linux)."
+say "Re-running it updates kitty."
 
 if command -v kitty >/dev/null 2>&1 \
   || [[ -e "$HOME/.local/kitty.app/bin/kitty" || -d "/Applications/kitty.app" ]]; then
@@ -430,14 +438,13 @@ fi
 
 # ── Stage 8: eza ─────────────────────────────────────────────────────────
 stage "eza"
-say "Modern ls replacement. Package name is 'eza' on both brew and apt."
+say "A nicer replacement for ls."
 ensure_cmd eza
 
 # ── Stage 9: starship ────────────────────────────────────────────────────
 stage "starship"
-say "Cross-shell prompt. The official install script is identical on mac and"
-say "Linux and drops a single 'starship' binary into /usr/local/bin (via sudo)."
-say "Its config is a plain file, stowed to ~/.config/starship.toml by 'make'."
+say "Your shell prompt. The installer puts one 'starship' program in"
+say "/usr/local/bin and asks for sudo. Its config is linked later by 'make'."
 
 if command -v starship >/dev/null 2>&1; then
   note "starship already installed ($(command -v starship)) — skipping"
@@ -455,9 +462,7 @@ fi
 
 # ── Stage 10: yazi ───────────────────────────────────────────────────────
 stage "yazi"
-say "Terminal file manager. On macOS it is a one-line 'brew install yazi'; on"
-say "Ubuntu it comes from the yazi-rs apt repo — add the signing key and source,"
-say "then install with apt. There is no config to stow, so 'make' is unchanged."
+say "Terminal file manager."
 
 if command -v yazi >/dev/null 2>&1; then
   note "yazi already installed ($(command -v yazi)) — skipping"
@@ -468,9 +473,10 @@ elif [[ "$OS" == mac ]]; then
   printf '  %s✓ installed%s yazi\n' "$GREEN" "$RESET"
   INSTALLED+=("yazi")
 else
-  say "This adds /usr/share/keyrings/yazi-keyring.gpg and"
-  say "/etc/apt/sources.list.d/yazi.list, then installs yazi via apt."
-  if confirm "add the yazi-rs apt repo and install yazi now?"; then
+  say "Ubuntu needs yazi's own apt repo. This adds a signing key and a"
+  say "source list under /usr/share/keyrings and /etc/apt, then installs yazi."
+  printf '\n'
+  if confirm "Add the repo and install yazi?"; then
     step "adding the yazi-rs signing key and apt source"
     curl -fsSL https://yazi-rs.github.io/builds/yazi-keyring.gpg \
       | sudo tee /usr/share/keyrings/yazi-keyring.gpg >/dev/null
@@ -487,12 +493,9 @@ else
 fi
 
 # ── Stage 11: prepare config directories ─────────────────────────────────
-stage "prepare config directories"
-say "stow links files into a directory. If ~/.config/<tool> is missing, stow"
-say "would replace the whole directory with a single symlink ('folding'), which"
-say "traps anything the app later writes there inside ~/dotfiles."
-say "Each directory is made real and empty here so that never happens. An"
-say "existing one can be deleted so stow rebuilds it clean."
+stage "Config folders"
+say "Setting up ~/.config/kitty, nvim, tmux and eza so your dotfiles"
+say "can link into them."
 
 prep_config_dir "$HOME/.config/kitty" kitty
 prep_config_dir "$HOME/.config/nvim"  nvim
@@ -507,10 +510,8 @@ fi
 
 # ── Stage 12: Nerd Font ──────────────────────────────────────────────────
 stage "Nerd Font ($FONT_ASSET)"
-say "kitty and starship render icons and powerline glyphs with a Nerd Font."
-say "This installs '$FONT_FAMILY' unless a face from that family is already"
-say "available. On macOS the .ttf files go in ~/Library/Fonts; on Ubuntu they"
-say "go in ~/.local/share/fonts and 'fc-cache -f' rebuilds the font cache."
+say "kitty and starship use a Nerd Font for icons."
+say "Installs $FONT_FAMILY unless you already have it."
 
 if font_present; then
   note "$FONT_FAMILY already installed — skipping"
