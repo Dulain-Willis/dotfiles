@@ -17,6 +17,7 @@ export EZA_CONFIG_DIR="$HOME/.config/eza" #sets directory you would like eza to 
 
 export EDITOR=nvim
 export VISUAL=nvim
+export SUDO_EDITOR=nvim #sudoedit opens your own nvim config, not root's
 
 
 
